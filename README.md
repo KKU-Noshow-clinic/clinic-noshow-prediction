@@ -22,7 +22,7 @@
 (ตั้ง `~/.kaggle/kaggle.json` หรือ env `KAGGLE_USERNAME` / `KAGGLE_KEY` หากดาวน์โหลดแบบไม่ login ไม่ได้)
 
 ```bash
-git clone https://github.com/ICEkungIIR/clinic-noshow-prediction.git && cd clinic-noshow-prediction
+git clone [https://github.com/ICEkungIIR/clinic-noshow-prediction.git](https://github.com/KKU-Noshow-clinic/clinic-noshow-prediction) && cd clinic-noshow-prediction
 make setup      # ติดตั้ง Python 3.11 + dependencies ตาม uv.lock (ล็อกเวอร์ชันทุกตัว)
 make data       # ดาวน์โหลดข้อมูล -> data/raw/noshow.csv และพิมพ์ SHA-256 (= data version)
 make test       # ruff + pytest
