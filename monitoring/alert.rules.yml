@@ -1,0 +1,88 @@
+groups:
+  - name: clinic-noshow-system-health
+    rules:
+      - alert: NoShowAPIUnavailable
+        expr: up{job="clinic-noshow-api"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Clinic no-show API is unavailable"
+          description: "Prometheus cannot scrape the prediction API for 30 seconds. Check the API container and its /metrics endpoint."
+
+      - alert: NoShowExporterUnavailable
+        expr: up{job="clinic-noshow-batch-monitor"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Batch monitoring exporter is unavailable"
+          description: "Start scripts/monitoring/exporter.py in a VS Code terminal and check port 9101."
+
+      - alert: NoShowHighP95Latency
+        expr: histogram_quantile(0.95, sum by (le) (rate(noshow_request_latency_seconds_bucket[5m]))) > on() noshow_monitor_p95_latency_threshold_seconds
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prediction API p95 latency is above its configured limit"
+          description: "Review API load, model inference time, and infrastructure."
+
+      - alert: NoShowHigh5xxRate
+        expr: sum(rate(noshow_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(noshow_requests_total[5m])), 0.001) > on() noshow_monitor_error_rate_threshold
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prediction API 5xx rate is above its configured limit"
+          description: "Inspect API logs and recent deployments."
+
+  - name: clinic-noshow-model-quality
+    rules:
+      - alert: NoShowMonitoringReportMissing
+        expr: noshow_monitor_report_available == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No batch monitoring report is available"
+          description: "Run scripts/monitoring/run_monitoring.py and check reports/monitoring/monitoring_latest.json."
+
+      - alert: NoShowMonitoringJobStale
+        expr: time() - noshow_monitor_last_run_timestamp_seconds > 86400
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Batch monitoring has not run in 24 hours"
+          description: "Run the batch monitoring command and inspect its output before trusting drift panels."
+
+      - alert: NoShowDataDriftDetected
+        expr: noshow_monitor_data_drift_share > on() noshow_monitor_drift_share_threshold
+        for: 15m
+        labels:
+          severity: warning
+          action: investigate
+        annotations:
+          summary: "Clinic appointment input data drift detected"
+          description: "Review reports/monitoring/evidently_data_drift.html and wait for delayed outcome labels before deciding to retrain."
+
+      - alert: NoShowPredictionDriftDetected
+        expr: noshow_monitor_prediction_drift_alert == 1
+        for: 15m
+        labels:
+          severity: warning
+          action: investigate
+        annotations:
+          summary: "No-show prediction distribution changed"
+          description: "Review score distribution and collect delayed labels; prediction drift alone does not trigger retraining."
+
+      - alert: NoShowConceptDriftSuspected
+        expr: noshow_monitor_concept_drift_suspected == 1
+        for: 5m
+        labels:
+          severity: critical
+          action: retrain_review
+        annotations:
+          summary: "No-show concept/performance drift detected from delayed labels"
+          description: "Review ROC-AUC and the SMS_received subgroup comparison, then run the existing train-evaluate-gate pipeline. Promote only if the gate passes."
