@@ -1,0 +1,41 @@
+{
+  "selected_model": "exp2_lightgbm_balanced",
+  "selected_threshold": 0.5,
+  "selected_run_id": "9459194862de4ee9bb58f808b10576fb",
+  "selected_model_uri": "models:/m-c863eb53946f44b48050630226d24b32",
+  "reason": "Team-selected model; pending registry gate.",
+  "git_sha": "d10f8409e00c4a8f680a47c8b81df8030faecadd",
+  "data_sha256": "9132d3e7d0246617df9041d3764f20ad6f08e7b0d9f0997fa254fc5e52eda27d",
+  "experiments": {
+    "exp1_logistic_regression": {
+      "val_pr_auc": 0.29890403711778135,
+      "val_noshow_recall": 0.714108527131783,
+      "val_noshow_precision": 0.2880190095047524,
+      "val_threshold": 0.5,
+      "test_pr_auc": 0.29357395144565995,
+      "test_noshow_recall": 0.6374436706267923,
+      "test_noshow_precision": 0.2762538837106081,
+      "test_threshold": 0.5
+    },
+    "exp2_lightgbm_balanced": {
+      "val_pr_auc": 0.33988212256344186,
+      "val_noshow_recall": 0.8024806201550387,
+      "val_noshow_precision": 0.2985005767012687,
+      "val_threshold": 0.5,
+      "test_pr_auc": 0.3214957601903517,
+      "test_noshow_recall": 0.7548136009832036,
+      "test_noshow_precision": 0.28407338883749617,
+      "test_threshold": 0.5
+    },
+    "exp3_lightgbm_tuned": {
+      "val_pr_auc": 0.3451687430441972,
+      "val_noshow_recall": 0.6024806201550388,
+      "val_noshow_precision": 0.33066712049012936,
+      "val_threshold": 0.5978438106030763,
+      "test_pr_auc": 0.3293621109059391,
+      "test_noshow_recall": 0.5403523146251537,
+      "test_noshow_precision": 0.3279462953754351,
+      "test_threshold": 0.5978438106030763
+    }
+  }
+}
