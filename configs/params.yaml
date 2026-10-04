@@ -1,26 +1,29 @@
-# Single source of truth for pipeline parameters (logged to MLflow on every run)
 seed: 42
 
 data:
-  # Kaggle: joniarroba/noshowappointments (110,527 appointments, Brazil, Apr-Jun 2016)
   kaggle_dataset: joniarroba/noshowappointments
   kaggle_file: KaggleV2-May-2016.csv
-  sha256: "9132d3e7d0246617df9041d3764f20ad6f08e7b0d9f0997fa254fc5e52eda27d"  # data version v1
+  sha256: "9132d3e7d0246617df9041d3764f20ad6f08e7b0d9f0997fa254fc5e52eda27d"
   raw_path: data/raw/noshow.csv
   processed_dir: data/processed
 
-split:  # time-based split on AppointmentDay (no random split: avoids temporal leakage)
-  train_end: "2016-05-20"   # confirmed by EDA (docs/data_decision.md)
+split:
+  train_end: "2016-05-20"
   val_end: "2016-05-31"
-  group_col: PatientId      # check patient overlap across splits
+  group_col: PatientId
 
 target:
-  column: No-show           # "Yes" = patient did NOT show up -> positive class 1
+  column: No-show
   positive_label: "Yes"
 
 model:
-  name: baseline_logreg
-  params: {}
+  selected_experiment: exp2_lightgbm_balanced
+  selected_threshold: 0.5
+  experiments:
+    - exp1_logistic_regression
+    - exp2_lightgbm_balanced
+    - exp3_lightgbm_tuned
+  threshold_min_recall: 0.60
 
 registry:
   model_name: clinic-noshow
