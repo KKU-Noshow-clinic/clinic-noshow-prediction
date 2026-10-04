@@ -18,18 +18,21 @@
 
 ## Quickstart (จากเครื่องเปล่า)
 
-ต้องมี [uv](https://docs.astral.sh/uv/), Docker และ Kaggle account
-(ตั้ง `~/.kaggle/kaggle.json` หรือ env `KAGGLE_USERNAME` / `KAGGLE_KEY` หากดาวน์โหลดแบบไม่ login ไม่ได้)
+ต้องมี [uv](https://docs.astral.sh/uv/) และ Docker เท่านั้น
+`make data` ดาวน์โหลดจาก Kaggle ได้โดยไม่ต้อง login (ถ้าเจอ rate limit ให้ตั้ง env `KAGGLE_USERNAME` / `KAGGLE_KEY`)
 
 ```bash
-git clone https://github.com/ICEkungIIR/clinic-noshow-prediction.git && cd clinic-noshow-prediction
+git clone https://github.com/KKU-Noshow-clinic/clinic-noshow-prediction.git && cd clinic-noshow-prediction
 make setup      # ติดตั้ง Python 3.11 + dependencies ตาม uv.lock (ล็อกเวอร์ชันทุกตัว)
 make data       # ดาวน์โหลดข้อมูล -> data/raw/noshow.csv และพิมพ์ SHA-256 (= data version)
 make test       # ruff + pytest
-make up         # เปิด API, MLflow, Prefect, Prometheus, Grafana
+make up         # เปิด API, MLflow, Prefect, Prometheus, Grafana (ครั้งแรก build image ~5 นาที)
+make pipeline   # train 3 experiments → gate → promote champion → API โหลดโมเดล (~5 นาที)
 make loadtest   # Locust p50/p95 เทียบ SLO -> docs/loadtest_report.md (ต้องเปิด API ก่อน)
-curl localhost:8000/health
+curl localhost:8000/health   # ต้องเห็น "model_loaded": true
 ```
+
+ถ้า `/health` ขึ้น `model_loaded: false` แปลว่ายังไม่ได้รัน `make pipeline` (ยังไม่มี champion ใน registry)
 
 | Service | URL |
 |---|---|
