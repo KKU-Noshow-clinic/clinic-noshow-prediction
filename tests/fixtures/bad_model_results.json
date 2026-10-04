@@ -1,0 +1,14 @@
+{
+  "selected_model": "exp2_lightgbm_balanced",
+  "selected_threshold": 0.5,
+  "reason": "Test fixture: a weak candidate that must be blocked by the model gate.",
+  "data_sha256": "9132d3e7d0246617df9041d3764f20ad6f08e7b0d9f0997fa254fc5e52eda27d",
+  "experiments": {
+    "exp2_lightgbm_balanced": {
+      "val_pr_auc": 0.25,
+      "val_noshow_recall": 0.55,
+      "val_noshow_precision": 0.24,
+      "val_threshold": 0.5
+    }
+  }
+}

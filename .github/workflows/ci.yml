@@ -1,3 +1,7 @@
+# CI for ML (Lecture 10): test Code, Data and Model on every Pull Request.
+#   code-quality    -> Code : lint + unit/integration tests
+#   data-validation -> Data : schema validation (good fixtures pass, bad_data.csv must fail)
+#   model-gate      -> Model: performance validation against the gate in configs/slo.yaml
 name: CI
 
 on:
@@ -22,5 +26,31 @@ jobs:
       - name: Unit tests
         run: uv run pytest -q
 
-  # TODO(ci workstream): add `data-validation` (Pandera on fixtures + bad_data.csv must fail)
-  # TODO(ci workstream): add `model-gate` (evaluate candidate vs configs/slo.yaml gate)
+  data-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.10"
+      - name: Install locked dependencies
+        run: uv sync --frozen
+      - name: Good fixtures must pass the schema
+        run: uv run python -m noshow.ci.data_validation tests/fixtures/good_data.csv
+      - name: Bad data must be rejected by the schema
+        run: |
+          uv run python -m noshow.ci.data_validation tests/fixtures/bad_data.csv --expect-fail
+          uv run python -m noshow.ci.data_validation tests/fixtures/bad_data_cases.csv --expect-fail
+
+  model-gate:
+    needs: [code-quality, data-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.10"
+      - name: Install locked dependencies
+        run: uv sync --frozen
+      - name: Selected model must pass the gate in configs/slo.yaml
+        run: uv run python -m noshow.ci.model_gate
