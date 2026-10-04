@@ -53,8 +53,9 @@
 | **2** | **LightGBM balanced (เลือกใช้)** | 0.340 | **0.802** | 0.321 | **0.755** |
 | 3 | LightGBM tuned (thr 0.598) | **0.345** | 0.603 | 0.329 | 0.540 |
 
-- **เหตุผลที่เลือก Exp 2:** recall บน test สูงที่สุดและผ่าน gate ส่วน Exp 3 มี PR-AUC ดีกว่าเล็กน้อย
-  แต่ recall บน test ต่ำกว่า 0.60
+- **เหตุผลที่เลือก Exp 2:** optimizing metric คือ no-show recall และ Exp 2 มี validation recall สูงสุด (0.802)
+  ในกลุ่มที่ผ่าน gate ส่วน Exp 3 มี PR-AUC สูงกว่าเล็กน้อย แต่ PR-AUC เป็นเพียงเกณฑ์ขั้นต่ำ
+  และ recall ของ Exp 3 บน test ตกเหลือ 0.540
 - Track ด้วย MLflow (git SHA, data hash, params, metrics, artifacts, environment) และอธิบายผลด้วย SHAP
 
 ## 8. Making Predictions (Serving)
@@ -69,8 +70,8 @@
 
 | ประเภท | ตัวชี้วัด | เกณฑ์ |
 |---|---|---|
-| Optimizing | PR-AUC คลาส no-show | ยิ่งสูงยิ่งดี |
-| Gating (โมเดล) | recall ≥ 0.60, PR-AUC ≥ baseline 0.299, ขนาด ≤ 100 MB, ไม่แย่กว่าโมเดล Production | ไม่ผ่าน = ไม่ promote |
+| Optimizing | **No-show recall** ที่ threshold 0.5 | ยิ่งสูงยิ่งดี (FN แพงกว่า FP) |
+| Gating (โมเดล) | recall ≥ 0.60, PR-AUC ≥ baseline 0.299, precision ≥ 0.25 (เสนอ, คุมต้นทุน SMS), ขนาด ≤ 100 MB, ไม่แย่กว่าโมเดล Production | ไม่ผ่าน = ไม่ promote |
 | Gating (ระบบ) | p50 ≤ 50 ms, p95 ≤ 200 ms, error ≤ 1%, uptime ≥ 99% | ตาม `configs/slo.yaml` |
 | Business KPI | % ของนัด no-show ที่ถูกเตือนทัน, อัตราการใช้สล็อต, ค่า SMS ต่อ no-show 1 รายที่ป้องกันได้ | — |
 
