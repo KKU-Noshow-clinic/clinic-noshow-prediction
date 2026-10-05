@@ -16,6 +16,8 @@ data/**
 # MLflow / artifacts / models
 mlruns/
 mlartifacts/
+mlflow.db
+.runtime-tmp/
 *.pkl
 *.joblib
 *.onnx

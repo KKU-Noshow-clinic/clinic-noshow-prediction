@@ -1,10 +1,10 @@
 {
   "selected_model": "exp2_lightgbm_balanced",
   "selected_threshold": 0.5,
-  "selected_run_id": "9459194862de4ee9bb58f808b10576fb",
-  "selected_model_uri": "models:/m-c863eb53946f44b48050630226d24b32",
+  "selected_run_id": "22a642b09f4c4c02a294c1ceb67e047d",
+  "selected_model_uri": "models:/m-c182fd22c9224f25a67e7da3f231c9e2",
   "reason": "Team-selected model; pending registry gate.",
-  "git_sha": "d10f8409e00c4a8f680a47c8b81df8030faecadd",
+  "git_sha": "4e311f35557d512a4a1118c815d9e64191fd98bf",
   "data_sha256": "9132d3e7d0246617df9041d3764f20ad6f08e7b0d9f0997fa254fc5e52eda27d",
   "experiments": {
     "exp1_logistic_regression": {

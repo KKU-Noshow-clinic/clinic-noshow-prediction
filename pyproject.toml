@@ -21,6 +21,7 @@ dependencies = [
     "uvicorn[standard]",
     "pydantic>=2",
     "prometheus-client",
+    "shap>=0.51.0",
 ]
 
 [dependency-groups]

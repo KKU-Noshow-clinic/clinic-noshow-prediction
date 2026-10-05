@@ -1,0 +1,344 @@
+[
+  {
+    "name": "normal_typical",
+    "why": "นัดล่วงหน้า 6 วัน ข้อมูลครบถูกต้อง",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "normal_same_day",
+    "why": "จองและมาวันเดียวกัน (lead time = 0)",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-10T07:30:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "normal_long_lead",
+    "why": "นัดล่วงหน้านาน 60 วัน (กลุ่มเสี่ยงไม่มาสูง)",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-03-11T09:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 0
+    }
+  },
+  {
+    "name": "normal_newborn",
+    "why": "อายุ 0 ปี (ขอบล่างที่ยอมรับ)",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "M",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 0,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "normal_date_only",
+    "why": "AppointmentDay ไม่มีเวลา ระบบถือเป็น UTC",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "normal_new_neighbourhood",
+    "why": "ย่านที่โมเดลไม่เคยเห็น + ตัวพิมพ์เล็ก",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "nova vila",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "normal_handcap_3",
+    "why": "Handcap 3 ถูกยุบเป็น 1 เหมือนตอน clean",
+    "expected_status": 200,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 3,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_gender",
+    "why": "Gender ต้องเป็น F หรือ M",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "X",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_age_negative",
+    "why": "อายุติดลบ",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": -1,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_age_too_high",
+    "why": "อายุเกิน 120",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 150,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_age_text",
+    "why": "อายุเป็นข้อความ",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": "old",
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_sms_value",
+    "why": "SMS_received ต้องเป็น 0/1",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 2
+    }
+  },
+  {
+    "name": "bad_booked_after_appointment",
+    "why": "ScheduledDay หลัง AppointmentDay",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-12T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_date_format",
+    "why": "วันที่อ่านไม่ได้",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "next tuesday",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_missing_field",
+    "why": "ไม่ส่ง Age",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_label_leak",
+    "why": "ส่งคำตอบ No-show มาด้วย (label leakage)",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1,
+      "No-show": "Yes"
+    }
+  },
+  {
+    "name": "bad_patient_id",
+    "why": "PatientId ต้องมากกว่า 0",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "JARDIM DA PENHA",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  },
+  {
+    "name": "bad_empty_neighbourhood",
+    "why": "Neighbourhood ว่าง",
+    "expected_status": 422,
+    "request": {
+      "PatientId": 29872499824296.0,
+      "Gender": "F",
+      "ScheduledDay": "2016-05-04T08:00:00Z",
+      "AppointmentDay": "2016-05-10T00:00:00Z",
+      "Age": 45,
+      "Neighbourhood": "",
+      "Scholarship": 0,
+      "Hipertension": 1,
+      "Diabetes": 0,
+      "Alcoholism": 0,
+      "Handcap": 0,
+      "SMS_received": 1
+    }
+  }
+]

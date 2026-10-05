@@ -1,5 +1,8 @@
 FROM python:3.11.16-slim
 
+# LightGBM (Exp 2 champion) needs OpenMP at runtime; slim images do not ship it
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv==0.12.10
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
@@ -12,7 +15,12 @@ COPY configs ./configs
 RUN uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
+# Serving performance (docs/serving.md):
+#  WEB_CONCURRENCY  uvicorn worker processes (read by uvicorn itself); override in compose
+#  OMP_NUM_THREADS  1 thread per LightGBM call so several workers do not fight over cores
+#  PROMETHEUS_MULTIPROC_DIR  shared metrics across workers; emptied on every container start
+ENV WEB_CONCURRENCY=2 OMP_NUM_THREADS=1 PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=3s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
-CMD ["uvicorn", "noshow.serving.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "rm -rf \"$PROMETHEUS_MULTIPROC_DIR\" && mkdir -p \"$PROMETHEUS_MULTIPROC_DIR\" && exec uvicorn noshow.serving.app:app --host 0.0.0.0 --port 8000"]

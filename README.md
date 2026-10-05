@@ -18,16 +18,60 @@
 
 ## Quickstart (จากเครื่องเปล่า)
 
-ต้องมี [uv](https://docs.astral.sh/uv/), Docker และ Kaggle account
-(ตั้ง `~/.kaggle/kaggle.json` หรือ env `KAGGLE_USERNAME` / `KAGGLE_KEY` หากดาวน์โหลดแบบไม่ login ไม่ได้)
+ติดตั้ง [Git](https://git-scm.com/downloads), [uv](https://docs.astral.sh/uv/getting-started/installation/) และ Docker Desktop แล้วเปิด Docker ให้พร้อม
 
-```bash
-git clone https://github.com/ICEkungIIR/clinic-noshow-prediction.git && cd clinic-noshow-prediction
-make setup      # ติดตั้ง Python 3.11 + dependencies ตาม uv.lock (ล็อกเวอร์ชันทุกตัว)
-make data       # ดาวน์โหลดข้อมูล -> data/raw/noshow.csv และพิมพ์ SHA-256 (= data version)
-make test       # ruff + pytest
-make up         # เปิด API, MLflow, Prefect, Prometheus, Grafana
-curl localhost:8000/health
+ใช้ PowerShell รันตามลำดับ
+
+### 1. ดาวน์โหลดโค้ดและเตรียมข้อมูล
+
+```powershell
+git clone https://github.com/KKU-Noshow-clinic/clinic-noshow-prediction.git
+cd clinic-noshow-prediction
+uv python install 3.11
+uv sync --locked
+uv run python scripts/download_data.py
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest -q
+```
+
+ถ้า Kaggle ขอ login ให้ตั้ง [credentials](https://github.com/Kaggle/kagglehub#authentication) แล้วดาวน์โหลดใหม่
+
+### 2. เปิดระบบและรัน pipeline
+
+```powershell
+$env:API_WORKERS = "2"
+$env:API_BATCH = "32"
+$env:API_PROFILE = "1"
+docker compose up -d --build
+$env:PREFECT_API_URL = "http://127.0.0.1:4200/api"
+$env:NOSHOW_API_URL = "http://127.0.0.1:8000"
+uv run python -m noshow.pipeline.flow
+Invoke-RestMethod http://localhost:8000/health | ConvertTo-Json
+```
+
+รอให้ `model_loaded: true` ก่อนทดสอบ
+
+### 3. ทดสอบผ่าน Docker
+
+Warm-up 30 วินาที แล้ววัด 2 นาที ใช้ผู้ใช้จำลอง 50 คน
+
+```powershell
+New-Item -ItemType Directory -Force -Path loadtest/results | Out-Null
+$projectPath = (Get-Location).Path
+$apiContainer = docker compose ps -q api
+$apiNetwork = (docker inspect $apiContainer | ConvertFrom-Json)[0].NetworkSettings.Networks.PSObject.Properties.Name | Select-Object -First 1
+docker run --rm --network "$apiNetwork" --mount "type=bind,source=$projectPath,target=/mnt/locust" locustio/locust:2.46.6 -f /mnt/locust/loadtest/locustfile.py --host http://api:8000 --headless --users 50 --spawn-rate 10 --run-time 30s --only-summary
+docker run --rm --network "$apiNetwork" --mount "type=bind,source=$projectPath,target=/mnt/locust" locustio/locust:2.46.6 -f /mnt/locust/loadtest/locustfile.py --host http://api:8000 --headless --users 50 --spawn-rate 10 --run-time 2m --csv /mnt/locust/loadtest/results/docker_run --only-summary
+uv run python scripts/check_slo.py loadtest/results/docker_run --label "Docker; 2 workers; batch 32; profile on; warm-up 30s" --users 50 --duration 2m --out docs/loadtest_report_docker.md
+```
+
+ดูผลที่ `docs/loadtest_report_docker.md` เป้า p50 ≤ 50 ms, p95 ≤ 200 ms และ error ≤ 1%
+
+### 4. ปิดระบบ
+
+```powershell
+docker compose down
 ```
 
 | Service | URL |
@@ -42,7 +86,8 @@ curl localhost:8000/health
 
 - **Target:** `No-show == "Yes"` → 1 (ผู้ป่วยไม่มา) ประมาณ 20% ของข้อมูล
 - **Split:** ตามเวลา `AppointmentDay` (ดู `configs/params.yaml`) ห้ามสุ่ม
-- **Optimizing metric:** PR-AUC ของคลาส no-show; **Gating:** ดู `configs/slo.yaml`
+- **Optimizing metric สำหรับงานส่งเตือน:** no-show recall ที่ threshold 0.5; ทีมเลือก Exp 2
+  โดยใช้ PR-AUC เป็นเกณฑ์ขั้นต่ำและรายงาน precision/จำนวนคนที่ต้องเตือนด้วย (ดู `configs/slo.yaml`)
 - **Preprocessing:** โค้ดชุดเดียวใน `src/noshow/features/` ใช้ทั้งตอน train และ serve
 - **Registry model name:** `clinic-noshow`
 
@@ -62,7 +107,7 @@ src/noshow/
   features/    preprocessing ชุดเดียว ใช้ทั้ง train และ serve (กัน training-serving skew)
   models/      train, evaluate, gate
   registry/    MLflow registry: promote, rollback
-  serving/     FastAPI app (/predict, /predict_batch, /health, /metrics)
+  serving/     FastAPI app (/predict, /predict_batch, /health, /reload, /metrics) - docs/serving.md
   monitoring/  Evidently drift + retrain trigger
   pipeline/    Prefect flows (DAG)
 configs/       params.yaml, slo.yaml
