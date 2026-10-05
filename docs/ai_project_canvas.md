@@ -1,106 +1,81 @@
 # AI Project Canvas — Clinic Appointment No-Show Prediction
 
-ตัวเลขทั้งหมดอ้างอิงจาก `docs/eda.txt`, `docs/data_decision.txt`, `docs/modeling.md`,
-`docs/model_results.json` และ `docs/latency_breakdown.md`
+รูปแบบตาม AI Project Canvas ของรายวิชา (9 ช่อง) ตัวเลขอ้างอิงจาก `docs/eda.txt`,
+`docs/data_decision.txt`, `docs/model_results.json`, `docs/loadtest_report.md` และ `configs/slo.yaml`
 
-## 1. Problem / Value Proposition
+## 1. Value Proposition
 
-- ผู้ป่วยประมาณ **20.2%** ไม่มาตามนัด (22,319 จาก 110,527 นัด) ทำให้คลินิกเสียสล็อตแพทย์และเวลาพยาบาล
-  ขณะที่ผู้ป่วยคนอื่นต้องรอคิวนานขึ้น
-- **คุณค่า:** ทำนายล่วงหน้าว่านัดไหนเสี่ยงจะไม่มา เพื่อให้คลินิกโทรหรือส่ง SMS เตือนเฉพาะกลุ่มเสี่ยง
-  หรือจัด overbooking ให้เหมาะสม แทนการเตือนทุกคนแบบเหวี่ยงแห
+- **ปัญหา:** ผู้ป่วยไม่มาตามนัดประมาณ 20% ทำให้คลินิกเสียสล็อตแพทย์ เสียรายได้ และผู้ป่วยคนอื่นต้องรอคิวนานขึ้น
+- **คุณค่า:** ทำนายล่วงหน้าว่านัดไหนเสี่ยงที่ผู้ป่วยจะไม่มา เพื่อให้คลินิกโทรหรือส่ง SMS เตือน**เฉพาะกลุ่มเสี่ยง**
+  หรือจัด overbooking ได้ทัน จึงลดสล็อตที่ว่างเปล่าและลดต้นทุนการเตือนแบบเหวี่ยงแห
 
-## 2. Users / Stakeholders
+## 2. Data
 
-- **ผู้ใช้หลัก:** เจ้าหน้าที่เวชระเบียนหรือฝ่ายนัดหมาย ซึ่งเห็นรายชื่อนัดเสี่ยงสูงของวันพรุ่งนี้
-- **ผู้ได้รับผลกระทบ:** ผู้ป่วย (ได้รับการเตือน) และผู้บริหารคลินิก (ใช้ทรัพยากรได้คุ้มขึ้น)
+- **ข้อมูลที่ใช้:** ประวัตินัดหมาย ได้แก่ วันจอง, วันนัด, อายุ, เพศ, ย่าน, โรคประจำตัว, สวัสดิการ (Scholarship),
+  การได้รับ SMS และผลว่ามาหรือไม่มา (label)
+- **แหล่งข้อมูล:** Kaggle *Medical Appointment No Shows* (บราซิล, 29 เม.ย. – 8 มิ.ย. 2016)
+- **ปริมาณ:** 110,527 นัด 14 คอลัมน์ ไฟล์ CSV เหลือ 110,521 แถวหลัง clean
+- **การควบคุม:** ตรวจ schema ด้วย Pandera และใช้ SHA-256 เป็น data version
 
-## 3. Prediction Task
+## 3. Skills
 
-- Binary classification: `No-show = Yes` (1) หรือมาตามนัด (0) ต่อนัดหมาย 1 รายการ
-- **ทำนายเมื่อ:** ตอนจองนัด (real-time) และคืนก่อนวันนัด (batch)
-- **Output:** ความน่าจะเป็นที่จะไม่มา และ flag ว่าเสี่ยงหรือไม่ โดยใช้ threshold 0.5
+- **Data Engineer:** ingest, cleaning, validation
+- **ML Engineer:** feature engineering, LightGBM, จัดการ class imbalance, SHAP
+- **MLOps Engineer:** MLflow, Prefect, Docker, CI/CD และ monitoring
+- **Backend Developer:** FastAPI, load testing
+- **ผู้เชี่ยวชาญงานคลินิก/เวชระเบียน:** ให้คำปรึกษาว่าปัจจัยใดมีผลต่อการมาตามนัด และตรวจว่านำผลไปใช้ได้จริง
 
-## 4. Decisions
+## 4. Output
 
-- ถ้า flag = เสี่ยง ให้ส่ง SMS ซ้ำหรือโทรยืนยันในคืนก่อนวันนัด
-- ถ้าวันนั้นมีนัดเสี่ยงหลายรายการ ให้พิจารณา overbook เพิ่ม 1–2 สล็อต
-- ต้นทุนของการทำนายผิดไม่เท่ากัน:
-  - **False Negative** (ไม่เตือนคนที่ไม่มา): เสียสล็อตแพทย์ ซึ่งแพงกว่า
-  - **False Positive** (เตือนคนที่มาอยู่แล้ว): เสียค่า SMS หรือเวลาโทร ซึ่งถูกกว่า
-- ด้วยเหตุนี้ทีมจึง**เน้น recall มากกว่า precision**
+- **ตัวชี้วัดหลัก (Optimizing):** **No-show recall** ยิ่งสูงยิ่งดี เพราะการพลาดผู้ที่จะไม่มา (FN)
+  แพงกว่าการเตือนเกิน (FP) โมเดลที่เลือก (Exp 2) ได้ val recall **0.80** และ test recall **0.755**
+- **ตัวชี้วัดเสริม (Satisficing)** ตาม `configs/slo.yaml`:
+  - Recall ≥ 0.60
+  - PR-AUC ≥ 0.298904 (baseline)
+  - ขนาดโมเดล ≤ 100 MB และต้องดีกว่าโมเดล Production
+  - p50 ≤ 50 ms, p95 ≤ 200 ms (วัดได้จริง 45 / 80 ms), error rate ≤ 1%
+- **ติดตามเพิ่ม (ยังไม่ใช้เป็น gate):** precision คลาส no-show (test 0.284) ใช้ประเมินต้นทุนการเตือน
 
-## 5. Data Sources
+## 5. Integration
 
-- Kaggle *Medical Appointment No Shows* (บราซิล, 29 เม.ย. – 8 มิ.ย. 2016) 110,527 แถว 14 คอลัมน์
-- Data version v1: SHA-256 `9132d3e7d0246617df9041d3764f20ad6f08e7b0d9f0997fa254fc5e52eda27d`
-- หลัง cleaning เหลือ **110,521 แถว** (ลบ Age < 0 และแถวที่ ScheduledDay อยู่หลัง AppointmentDay;
-  Handcap 2–4 ปรับเป็น 1)
-- **Split ตามเวลา:** train ≤ 2016-05-20 / val ≤ 2016-05-31 / test ถึง 2016-06-08 ตรวจด้วย Pandera schema
+- **API (FastAPI ใน Docker)** ให้ระบบนัดหมายของคลินิกเรียกใช้
+  - **แบบ batch** (`/predict_batch`): รันคืนก่อนวันนัด แล้วส่งรายชื่อผู้ที่เสี่ยงไปให้ระบบส่ง SMS หรือให้เจ้าหน้าที่โทรเตือน
+  - **แบบ real-time** (`/predict`): แสดงคะแนนความเสี่ยงทันทีตอนเจ้าหน้าที่จองนัด
+- โมเดลมาจาก MLflow Registry (alias champion) ทั้งระบบ retrain, gate และ deploy อัตโนมัติผ่าน Prefect
 
-## 6. Features
+## 6. Customers
 
-- `lead_time_days`, วันในสัปดาห์ของวันนัด, กลุ่มอายุ
-- จำนวนนัดก่อนหน้าและอัตรา no-show ในอดีต (นับเฉพาะนัดที่ทราบผลแล้วก่อนวันจอง เพื่อกัน leakage)
-- `SMS_received`, โรคประจำตัว, `Scholarship`, `Neighbourhood`
-- ใช้ preprocessing ชุดเดียวกันทั้งตอน train และ serve (sklearn `Pipeline`) จึงไม่เกิด training-serving skew
+- **กลุ่มหลัก:** เจ้าหน้าที่เวชระเบียนหรือฝ่ายนัดหมายของคลินิกและโรงพยาบาล
+- **กลุ่มรอง:** ผู้บริหารคลินิก (วางแผนสล็อตและ overbooking)
+- **ผู้ได้รับประโยชน์ทางอ้อม:** ผู้ป่วย ได้รับการเตือนและได้คิวเร็วขึ้น
 
-## 7. Building Models
+## 7. Stakeholders
 
-| Exp | โมเดล | Val PR-AUC | Val Recall | Test PR-AUC | Test Recall |
-|---|---|---|---|---|---|
-| 1 | Logistic Regression (baseline) | 0.299 | 0.714 | 0.294 | 0.637 |
-| **2** | **LightGBM balanced (เลือกใช้)** | 0.340 | **0.802** | 0.321 | **0.755** |
-| 3 | LightGBM tuned (thr 0.598) | **0.345** | 0.603 | 0.329 | 0.540 |
+- **ภายใน:** แพทย์และพยาบาล, ฝ่ายเวชระเบียน, ฝ่าย IT, ฝ่ายการเงิน, ผู้บริหาร
+- **ภายนอก:** ผู้ป่วย, ผู้ให้บริการ SMS, หน่วยงานกำกับดูแลข้อมูลสุขภาพ (PDPA)
 
-- **เหตุผลที่เลือก Exp 2:** optimizing metric คือ no-show recall และ Exp 2 มี validation recall สูงสุด (0.802)
-  ในกลุ่มที่ผ่าน gate ส่วน Exp 3 มี PR-AUC สูงกว่าเล็กน้อย แต่ PR-AUC เป็นเพียงเกณฑ์ขั้นต่ำ
-  และ recall ของ Exp 3 บน test ตกเหลือ 0.540
-- Track ด้วย MLflow (git SHA, data hash, params, metrics, artifacts, environment) และอธิบายผลด้วย SHAP
+## 8. Cost
 
-## 8. Making Predictions (Serving)
+- **บุคลากร:** ทีมพัฒนา 7 คน, ผู้ดูแลระบบหลัง deploy
+- **โครงสร้างพื้นฐาน:** server สำหรับ API, MLflow, Prefect, Prometheus/Grafana
+  (ใช้เครื่องมือ open-source ทั้งหมด จึงไม่มีค่า license)
+- **ข้อมูล:** ไม่ต้องจ้าง label เพราะ label (มาหรือไม่มา) **เกิดขึ้นเองหลังวันนัด** มีแค่ค่าจัดเก็บข้อมูลและค่าดูแลเรื่อง PDPA
+- **ต้นทุนดำเนินงาน:** ค่า SMS หรือเวลาโทรเตือนกลุ่มเสี่ยง (precision 0.28 → เตือนประมาณ 3.5 คนต่อ no-show จริง 1 ราย)
 
-- FastAPI: `/predict`, `/predict_batch` (1–1000 แถว), `/health`, `/metrics` โหลดโมเดล alias `champion` จาก registry
-- **รูปแบบหลักคือ batch คืนก่อนวันนัด** เพราะการเตือนไม่จำเป็นต้องเร็วระดับวินาที
-  ส่วน real-time ใช้ตอนเจ้าหน้าที่จองนัด
-- **Latency ที่วัดได้:** p50 ≈ 45 ms ภายใน Docker network (micro-batching + uvicorn workers)
-  เทียบกับ SLO p50 ≤ 50 ms, p95 ≤ 200 ms
+## 9. Revenue
 
-## 9. Metrics
+- **ลดการสูญเสีย:** สล็อตที่เคยว่างเพราะผู้ป่วยไม่มา กลับมาสร้างรายได้ได้ ด้วยการเตือนให้มา
+  หรือให้ยกเลิกล่วงหน้าแล้วนำสล็อตไปให้ผู้ป่วยรายอื่น
+- **ลดต้นทุน:** เตือนเฉพาะกลุ่มเสี่ยงแทนการเตือนทุกคน ช่วยลดค่า SMS และเวลาเจ้าหน้าที่
+  (ชุด test: เตือนประมาณครึ่งหนึ่งของนัดทั้งหมด แต่ครอบคลุมผู้ที่จะไม่มาได้ 75%)
+- **รายได้ใหม่ (ถ้าต่อยอด):** เปิดบริการ API ทำนาย no-show ให้คลินิกอื่นแบบ subscription
 
-| ประเภท | ตัวชี้วัด | เกณฑ์ |
-|---|---|---|
-| Optimizing | **No-show recall** ที่ threshold 0.5 | ยิ่งสูงยิ่งดี (FN แพงกว่า FP) |
-| Gating (โมเดล) | recall ≥ 0.60, PR-AUC ≥ baseline 0.299, precision ≥ 0.25 (เสนอ, คุมต้นทุน SMS), ขนาด ≤ 100 MB, ไม่แย่กว่าโมเดล Production | ไม่ผ่าน = ไม่ promote |
-| Gating (ระบบ) | p50 ≤ 50 ms, p95 ≤ 200 ms, error ≤ 1%, uptime ≥ 99% | ตาม `configs/slo.yaml` |
-| Business KPI | % ของนัด no-show ที่ถูกเตือนทัน, อัตราการใช้สล็อต, ค่า SMS ต่อ no-show 1 รายที่ป้องกันได้ | — |
+---
 
-**แปลงเป็นภาษาธุรกิจ (test set 26,451 นัด, no-show 18.5%):** โมเดลจับผู้ที่จะไม่มาได้ **75%**
-และในทุก ๆ 100 คนที่ถูกเตือน มี **28 คน**ที่เสี่ยงจริง เทียบกับการเตือนแบบสุ่มที่จะเจอประมาณ **18 คน**
-โมเดลจึงแม่นกว่าการสุ่มประมาณ **1.5 เท่า** (lift ≈ 1.54)
-
-## 10. Pipeline & Ops
-
-- Prefect DAG: ingest → validate → split → train → evaluate → gate → register → deploy สั่งรันด้วย `make pipeline`
-- ถ้า validation หรือ gate ไม่ผ่าน flow จะหยุดและแจ้งเตือนใน **Discord**
-- Registry ใช้ alias champion/challenger และ rollback ได้
-- CI 3 jobs: code-quality, data-validation, model-gate
-
-## 11. Monitoring & Retraining ⏳
-
-> รอยืนยันกับงาน Monitoring (Issue #6)
-
-- Data drift: Evidently ตรวจการกระจายของอายุ, Neighbourhood, lead time
-- Concept drift: เช่น ผลของ SMS ต่อการมาตามนัดเปลี่ยนไป ตรวจจาก recall บน label ที่ได้กลับมาหลังวันนัด
-- Grafana แสดง latency, error และ prediction distribution
-- เมื่อเกินเกณฑ์ → retrain → ผ่าน gate → promote โมเดลใหม่
-
-## 12. Risks & Ethics
+## ภาคผนวก: ความเสี่ยงและจริยธรรม (Responsible AI)
 
 - **ความเป็นธรรม:** โมเดลอาจให้คะแนนเสี่ยงสูงกับบางย่านหรือกลุ่มรายได้ (`Neighbourhood`, `Scholarship`)
   ห้ามนำผลไปใช้**ตัดสิทธิ์หรือลดลำดับคิว** ให้ใช้เพื่อ**เพิ่มการเตือน**เท่านั้น
 - **ความเป็นส่วนตัว:** ข้อมูลสุขภาพต้องใช้ PatientId แบบ anonymized และไม่ log ข้อมูลส่วนบุคคลใน API
 - **ข้อจำกัด:** ข้อมูลมาจากบราซิลเพียง 6 สัปดาห์ และวันที่ 21–23 กับ 26–29 พ.ค. หายไป
   จึงไม่ควรนำไปใช้กับคลินิกไทยโดยตรงก่อน retrain ด้วยข้อมูลท้องถิ่น
-- **Precision ต่ำ (0.28):** ผู้ที่ถูกเตือนส่วนใหญ่มาตามนัดอยู่แล้ว แต่ยอมรับได้เพราะต้นทุน SMS
-  ต่ำกว่าการเสียสล็อตแพทย์
