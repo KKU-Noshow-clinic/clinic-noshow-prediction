@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -131,7 +131,9 @@ def _psi(expected: pd.Series, actual: pd.Series, bins: int = 10) -> float:
         ref_values = expected.astype("string").fillna("<missing>")
         cur_values = actual.astype("string").fillna("<missing>")
         categories = sorted(set(ref_values) | set(cur_values))
-        expected_counts = np.array([(ref_values == value).sum() for value in categories], dtype=float)
+        expected_counts = np.array(
+            [(ref_values == value).sum() for value in categories], dtype=float
+        )
         actual_counts = np.array([(cur_values == value).sum() for value in categories], dtype=float)
     epsilon = 1e-6
     expected_pct = np.clip(expected_counts / max(expected_counts.sum(), 1), epsilon, None)
@@ -198,8 +200,13 @@ def _performance(feedback: pd.DataFrame, policy: dict[str, Any]) -> dict[str, An
     }
 
 
-def run(reference_path: Path, current_path: Path, feedback_path: Path | None, report_dir: Path,
-        policy: dict[str, Any]) -> dict[str, Any]:
+def run(
+    reference_path: Path,
+    current_path: Path,
+    feedback_path: Path | None,
+    report_dir: Path,
+    policy: dict[str, Any],
+) -> dict[str, Any]:
     reference_raw = pd.read_csv(reference_path)
     current_raw = pd.read_csv(current_path)
     reference = make_features(reference_raw)
@@ -221,9 +228,14 @@ def run(reference_path: Path, current_path: Path, feedback_path: Path | None, re
     )
     snapshot.save_html(str(report_dir / "evidently_data_drift.html"))
 
-    psi_by_feature = {column: round(_psi(reference[column], current[column]), 6) for column in columns}
-    drifted = [column for column, value in psi_by_feature.items()
-               if value >= float(policy["feature_psi_threshold"])]
+    psi_by_feature = {
+        column: round(_psi(reference[column], current[column]), 6) for column in columns
+    }
+    drifted = [
+        column
+        for column, value in psi_by_feature.items()
+        if value >= float(policy["feature_psi_threshold"])
+    ]
     drift_share = len(drifted) / len(columns)
     data_drift_alert = drift_share >= float(policy["drift_share_threshold"])
 
@@ -233,7 +245,6 @@ def run(reference_path: Path, current_path: Path, feedback_path: Path | None, re
     concept_drift = False
     performance_alert = False
     sms_effect_delta = None
-    positive_rate_delta = None
     label_state = "waiting_for_labeled_feedback"
 
     if feedback_path is not None and feedback_path.exists():
@@ -251,7 +262,9 @@ def run(reference_path: Path, current_path: Path, feedback_path: Path | None, re
                 )
 
         current_sms = performance["sms_no_show_rate"]
-        comparable_groups = [group for group in ("0", "1") if group in baseline_sms and group in current_sms]
+        comparable_groups = [
+            group for group in ("0", "1") if group in baseline_sms and group in current_sms
+        ]
         if len(comparable_groups) == 2:
             baseline_effect = baseline_sms["1"] - baseline_sms["0"]
             current_effect = current_sms["1"] - current_sms["0"]
@@ -259,33 +272,53 @@ def run(reference_path: Path, current_path: Path, feedback_path: Path | None, re
             min_group_rows = int(policy["min_sms_group_rows"])
             if "SMS_received" in feedback:
                 feedback_sms = pd.to_numeric(feedback["SMS_received"], errors="coerce")
-                feedback_labels = normalize_label(feedback[find_column(feedback, TARGET_CANDIDATES)])
+                feedback_labels = normalize_label(
+                    feedback[find_column(feedback, TARGET_CANDIDATES)]
+                )
                 feedback_score_column = find_column(feedback, SCORE_CANDIDATES)
                 feedback_scores = pd.to_numeric(feedback[feedback_score_column], errors="coerce")
-                group_counts = [int(((feedback_sms == group) & feedback_labels.notna() & feedback_scores.notna()).sum()) for group in (0, 1)]
+                group_counts = [
+                    int(
+                        (
+                            (feedback_sms == group)
+                            & feedback_labels.notna()
+                            & feedback_scores.notna()
+                        ).sum()
+                    )
+                    for group in (0, 1)
+                ]
                 if enough and min(group_counts) >= min_group_rows:
                     concept_drift = sms_effect_delta >= float(policy["sms_effect_delta_threshold"])
 
         concept_drift = concept_drift or performance_alert
 
-    current_prediction_rate = _positive_prediction_rate(current_raw, float(policy["score_threshold"]))
-    reference_prediction_rate = _positive_prediction_rate(reference_raw, float(policy["score_threshold"]))
+    current_prediction_rate = _positive_prediction_rate(
+        current_raw, float(policy["score_threshold"])
+    )
+    reference_prediction_rate = _positive_prediction_rate(
+        reference_raw, float(policy["score_threshold"])
+    )
     prediction_rate_delta = (
         abs(current_prediction_rate - reference_prediction_rate)
         if current_prediction_rate is not None and reference_prediction_rate is not None
         else None
     )
-    prediction_drift_alert = (
-        prediction_rate_delta is not None
-        and prediction_rate_delta >= float(policy["prediction_positive_rate_delta_threshold"])
+    prediction_drift_alert = prediction_rate_delta is not None and prediction_rate_delta >= float(
+        policy["prediction_positive_rate_delta_threshold"]
     )
 
     if concept_drift:
         action = "RETRAIN"
-        reason = "Concept/performance drift confirmed with enough delayed labels. Run the existing train-evaluate-gate pipeline."
+        reason = (
+            "Concept/performance drift confirmed with enough delayed labels. "
+            "Run the existing train-evaluate-gate pipeline."
+        )
     elif data_drift_alert or prediction_drift_alert:
         action = "WATCH"
-        reason = "Input/prediction drift detected. Investigate and collect delayed labels; do not retrain on unlabeled drift alone."
+        reason = (
+            "Input/prediction drift detected. Investigate and collect delayed labels; "
+            "do not retrain on unlabeled drift alone."
+        )
     elif label_state == "not_enough_labels":
         action = "WAIT_FOR_LABELS"
         reason = "Not enough delayed labels for a reliable performance/concept-drift decision."
@@ -294,7 +327,7 @@ def run(reference_path: Path, current_path: Path, feedback_path: Path | None, re
         reason = "No alert crossed the configured thresholds."
 
     summary = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "reference_file": str(reference_path),
         "current_file": str(current_path),
         "feedback_file": str(feedback_path) if feedback_path and feedback_path.exists() else None,
@@ -323,11 +356,19 @@ def run(reference_path: Path, current_path: Path, feedback_path: Path | None, re
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Evidently and label-based monitoring for clinic no-show.")
-    parser.add_argument("--reference", help="CSV from the model's healthy/training reference period.")
+    parser = argparse.ArgumentParser(
+        description="Evidently and label-based monitoring for clinic no-show."
+    )
+    parser.add_argument(
+        "--reference", help="CSV from the model's healthy/training reference period."
+    )
     parser.add_argument("--current", help="Current unlabeled appointment feature CSV.")
-    parser.add_argument("--feedback", help="Delayed-label CSV with No-show and noshow_score columns.")
-    parser.add_argument("--policy", default=str(POLICY_PATH), help="Path to monitoring_policy.json.")
+    parser.add_argument(
+        "--feedback", help="Delayed-label CSV with No-show and noshow_score columns."
+    )
+    parser.add_argument(
+        "--policy", default=str(POLICY_PATH), help="Path to monitoring_policy.json."
+    )
     parser.add_argument("--report-dir", help="Directory for HTML/JSON monitoring reports.")
     args = parser.parse_args()
 
@@ -335,14 +376,21 @@ def main() -> int:
     reference_path = resolve_path(args.reference or policy["reference_csv"])
     current_path = resolve_path(args.current or policy["current_csv"])
     default_feedback = resolve_path(policy["feedback_csv"])
-    feedback_path = resolve_path(args.feedback) if args.feedback else (default_feedback if default_feedback.exists() else None)
+    feedback_path = (
+        resolve_path(args.feedback)
+        if args.feedback
+        else (default_feedback if default_feedback.exists() else None)
+    )
     report_dir = resolve_path(args.report_dir or policy["report_dir"])
     result = run(reference_path, current_path, feedback_path, report_dir, policy)
     print(f"Action: {result['action']}")
-    print(f"Data drift share: {result['drift_share']:.1%} ({len(result['drifted_features'])}/{len(result['features_checked'])} features)")
+    n_drifted = len(result["drifted_features"])
+    n_checked = len(result["features_checked"])
+    print(f"Data drift share: {result['drift_share']:.1%} ({n_drifted}/{n_checked} features)")
     print(f"Drifted features: {', '.join(result['drifted_features']) or 'none'}")
     if result["performance"]:
-        print(f"Delayed-label rows: {result['performance']['labeled_rows']}; ROC-AUC: {result['performance']['roc_auc']}")
+        perf = result["performance"]
+        print(f"Delayed-label rows: {perf['labeled_rows']}; ROC-AUC: {perf['roc_auc']}")
     else:
         print("Concept/performance drift: waiting for delayed labels and prediction scores.")
     print(f"Reports: {report_dir}")
@@ -354,4 +402,4 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except (FileNotFoundError, ValueError, KeyError, json.JSONDecodeError) as error:
         print(f"Monitoring failed: {error}", file=sys.stderr)
-        raise SystemExit(2)
+        raise SystemExit(2) from error

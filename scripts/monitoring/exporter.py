@@ -22,7 +22,9 @@ def metric(name: str, value: Any, labels: dict[str, Any] | None = None) -> str:
         return ""
     label_text = ""
     if labels:
-        label_text = "{" + ",".join(f'{key}="{escape_label(val)}"' for key, val in labels.items()) + "}"
+        label_text = (
+            "{" + ",".join(f'{key}="{escape_label(val)}"' for key, val in labels.items()) + "}"
+        )
     return f"{name}{label_text} {float(value):.8g}"
 
 
@@ -33,7 +35,9 @@ def render_metrics(report_path: Path, policy_path: Path) -> str:
     ]
     try:
         policy = json.loads(policy_path.read_text(encoding="utf-8"))
-        report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+        report = (
+            json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+        )
     except (OSError, json.JSONDecodeError):
         policy = {}
         report = None
@@ -72,16 +76,21 @@ def render_metrics(report_path: Path, policy_path: Path) -> str:
 
     feature_psi = report.get("feature_psi") or {}
     if feature_psi:
-        lines.extend([
-            "# HELP noshow_monitor_feature_psi Population Stability Index by input feature.",
-            "# TYPE noshow_monitor_feature_psi gauge",
-        ])
-        lines.extend(metric("noshow_monitor_feature_psi", value, {"feature": feature})
-                     for feature, value in feature_psi.items())
+        lines.extend(
+            [
+                "# HELP noshow_monitor_feature_psi Population Stability Index by input feature.",
+                "# TYPE noshow_monitor_feature_psi gauge",
+            ]
+        )
+        lines.extend(
+            metric("noshow_monitor_feature_psi", value, {"feature": feature})
+            for feature, value in feature_psi.items()
+        )
 
     timestamp = report.get("generated_at")
     if timestamp:
         from datetime import datetime
+
         try:
             seconds = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp()
             lines.append(metric("noshow_monitor_last_run_timestamp_seconds", seconds))
