@@ -1,0 +1,18 @@
+{
+  "reference_csv": "data/processed/reference.csv",
+  "current_csv": "data/processed/data_drift.csv",
+  "feedback_csv": "data/processed/feedback.csv",
+  "report_dir": "reports/monitoring",
+  "feature_psi_threshold": 0.2,
+  "drift_share_threshold": 0.2,
+  "min_labeled_rows": 200,
+  "min_roc_auc": 0.7,
+  "max_roc_auc_drop": 0.05,
+  "baseline_roc_auc": null,
+  "sms_effect_delta_threshold": 0.1,
+  "min_sms_group_rows": 30,
+  "prediction_positive_rate_delta_threshold": 0.1,
+  "p95_latency_seconds": 0.2,
+  "error_rate_threshold": 0.01,
+  "score_threshold": 0.5
+}
