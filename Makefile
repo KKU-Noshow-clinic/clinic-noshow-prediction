@@ -1,4 +1,4 @@
-.PHONY: setup data train lint format test up down logs api pipeline loadtest parity
+.PHONY: setup data train lint format test up down logs api pipeline loadtest parity wait all
 
 setup:      ## install Python 3.11 + locked dependencies
 	uv sync
@@ -52,3 +52,10 @@ loadtest:   ## Locust p50/p95/throughput vs configs/slo.yaml -> docs/loadtest_re
 
 parity:     ## running API vs champion model scored locally (must be identical)
 	uv run python scripts/check_serving_parity.py
+
+wait:       ## wait until MLflow and API are ready (use after `make up`)
+	@echo "waiting for MLflow..."; until curl -sf -o /dev/null localhost:5001; do sleep 3; done
+	@echo "waiting for API..."; until curl -sf -o /dev/null localhost:8000/health; do sleep 3; done
+
+all: setup data test up wait pipeline   ## everything from a clean machine (macOS/Linux)
+	@curl -s localhost:8000/health; echo
