@@ -18,11 +18,40 @@
 
 ## Quickstart (จากเครื่องเปล่า)
 
-ติดตั้ง [Git](https://git-scm.com/downloads), [uv](https://docs.astral.sh/uv/getting-started/installation/) และ Docker Desktop แล้วเปิด Docker ให้พร้อม
+ต้องมี [Git](https://git-scm.com/downloads), [uv](https://docs.astral.sh/uv/getting-started/installation/) และ Docker Desktop (เปิดไว้ก่อนเริ่ม)
 
-ใช้ PowerShell รันตามลำดับ
+### macOS / Linux
 
-### 1. ดาวน์โหลดโค้ดและเตรียมข้อมูล
+คำสั่งเดียว ตั้งแต่ติดตั้งจนได้ API ที่โหลดโมเดลแล้ว:
+
+```bash
+git clone https://github.com/KKU-Noshow-clinic/clinic-noshow-prediction.git
+cd clinic-noshow-prediction
+make all          # setup → data → test → up → รอ MLflow/API → pipeline (~10 นาทีครั้งแรก)
+```
+
+หรือรันทีละขั้น:
+
+```bash
+make setup        # ติดตั้ง Python 3.11 + dependencies ตาม uv.lock
+make data         # ดาวน์โหลดข้อมูลและตรวจ SHA-256
+make test         # ruff + pytest
+make up           # เปิด API, MLflow, Prefect, Prometheus, Grafana (ครั้งแรก ~5 นาที)
+make wait         # รอจน MLflow และ API พร้อม
+make pipeline     # train → gate → promote champion (~5 นาที)
+curl localhost:8000/health    # ต้องเห็น "model_loaded": true
+```
+
+ปิดระบบด้วย `docker compose stop` (ข้อมูลใน MLflow/Prefect ยังอยู่)
+
+### Windows (PowerShell)
+
+Windows ไม่มี `make` ให้ใช้คำสั่งด้านล่างแทน
+
+<details>
+<summary>กดเพื่อดูคำสั่ง</summary>
+
+**1. ดาวน์โหลดโค้ดและเตรียมข้อมูล**
 
 ```powershell
 git clone https://github.com/KKU-Noshow-clinic/clinic-noshow-prediction.git
@@ -35,9 +64,7 @@ uv run ruff format --check .
 uv run pytest -q
 ```
 
-ถ้า Kaggle ขอ login ให้ตั้ง [credentials](https://github.com/Kaggle/kagglehub#authentication) แล้วดาวน์โหลดใหม่
-
-### 2. เปิดระบบและรัน pipeline
+**2. เปิดระบบและรัน pipeline**
 
 ```powershell
 $env:API_WORKERS = "2"
@@ -50,11 +77,25 @@ uv run python -m noshow.pipeline.flow
 Invoke-RestMethod http://localhost:8000/health | ConvertTo-Json
 ```
 
-รอให้ `model_loaded: true` ก่อนทดสอบ
+รอให้ `model_loaded: true` ก่อนทดสอบ ปิดระบบด้วย `docker compose down`
 
-### 3. ทดสอบผ่าน Docker
+</details>
 
-Warm-up 30 วินาที แล้ววัด 2 นาที ใช้ผู้ใช้จำลอง 50 คน
+### Load test (ไม่บังคับ)
+
+วัด p50/p95 เทียบ SLO: warm-up 30 วินาที แล้ววัด 2 นาที ผู้ใช้จำลอง 50 คน (ต้องเปิดระบบก่อน)
+
+<details>
+<summary>macOS / Linux</summary>
+
+```bash
+make loadtest
+```
+
+</details>
+
+<details>
+<summary>Windows (PowerShell, รันใน Docker network)</summary>
 
 ```powershell
 New-Item -ItemType Directory -Force -Path loadtest/results | Out-Null
@@ -66,13 +107,14 @@ docker run --rm --network "$apiNetwork" --mount "type=bind,source=$projectPath,t
 uv run python scripts/check_slo.py loadtest/results/docker_run --label "Docker; 2 workers; batch 32; profile on; warm-up 30s" --users 50 --duration 2m --out docs/loadtest_report_docker.md
 ```
 
-ดูผลที่ `docs/loadtest_report_docker.md` เป้า p50 ≤ 50 ms, p95 ≤ 200 ms และ error ≤ 1%
+ดูผลที่ `docs/loadtest_report_docker.md`
 
-### 4. ปิดระบบ
+</details>
 
-```powershell
-docker compose down
-```
+เป้า SLO: p50 ≤ 50 ms, p95 ≤ 200 ms, error ≤ 1%
+
+> **หมายเหตุ:** ถ้า `localhost:8000` ตอบ `Not Found` แปลว่ามีโปรแกรมอื่นใช้ port 8000 อยู่ ให้ปิดโปรแกรมนั้นก่อน
+> ถ้า Kaggle ขอ login ให้ตั้ง [credentials](https://github.com/Kaggle/kagglehub#authentication) แล้วรัน `make data` ใหม่
 
 | Service | URL |
 |---|---|
